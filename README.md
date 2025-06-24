@@ -1,10 +1,11 @@
 # Loopia DNS Pulumi Provider
 
-This project is based on the Pulumi provider boilerplate and the structure of the pulumi-command provider.
+This project is the Pulumi provider for Loopia DNS, named `loopia-dns`.
 
-- `cmd/pulumi-resource-dns/`: Provider binary entrypoint
+- `main.go`: Provider binary entrypoint
 - `pkg/`: Provider logic and resources
 - `tests/`: Provider-level tests
+- `sdk/`: Generated SDKs for supported languages
 
 ## Getting Started
 1. Install Go 1.21 or later.
@@ -14,10 +15,19 @@ This project is based on the Pulumi provider boilerplate and the structure of th
    ```
 3. Implement your provider logic in the `pkg/` directory.
 
+## SDK Generation
+To generate SDKs for all supported languages from your schema, run:
+
+```sh
+pulumi package gen-sdk
+```
+
+This will use the `schema.json` in the project root and output SDKs to the `sdk/` directory. Make sure to delete any old generated SDKs before running this command to avoid stale files.
+
 ## Development
 - Follow Pulumi provider best practices: https://www.pulumi.com/docs/guides/implement-providers/go/
 - Implement resource CRUD logic in `pkg/`.
-- Define schema in `internal/schema.go`.
+- Define your provider schema in `schema.json`.
 
 ## License
 MIT

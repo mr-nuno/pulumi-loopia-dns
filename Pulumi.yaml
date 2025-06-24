@@ -1,0 +1,4 @@
+name: loopia-dns
+runtime: go
+description: A Pulumi provider for Loopia DNS
+goImportBasePath: github.com/mr-nuno/pulumi-loopia-dns/sdk/go/loopiadns

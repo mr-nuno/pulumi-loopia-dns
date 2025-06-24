@@ -1,0 +1,35 @@
+{
+  "name": "loopia-dns",
+  "runtime": "go",
+  "description": "A Pulumi provider for Loopia DNS",
+  "language": {
+    "csharp": {
+      "respectSchemaVersion": true
+    },
+    "go": {
+      "generateResourceContainerTypes": true,
+      "importBasePath": "github.com/mr-nuno/pulumi-loopia-dns/sdk/go/loopiadns",
+      "respectSchemaVersion": true
+    },
+    "nodejs": {
+      "respectSchemaVersion": true
+    },
+    "python": {
+      "pyproject": {
+        "enabled": true
+      },
+      "respectSchemaVersion": true
+    }
+  },
+  "resources": {
+    "DnsRecord": {
+      "description": "A DNS record in Loopia",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "value": { "type": "string" }
+      },
+      "required": ["name", "type", "value"]
+    }
+  }
+}
