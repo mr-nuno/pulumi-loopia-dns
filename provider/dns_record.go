@@ -30,6 +30,20 @@ type DnsRecord struct {
 // Create creates a new DNS record in Loopia.
 func (r *DnsRecord) Create(ctx context.Context, req infer.CreateRequest[DnsRecordArgs]) (infer.CreateResponse[DnsRecordOutputs], error) {
 	inputs := req.Inputs
+
+	// Workaround for preview mode: check for preview in request.DryRun
+	if req.DryRun {
+		id := fmt.Sprintf("%s:%s:%s:preview", inputs.Zone, inputs.Name, inputs.Type)
+		output := DnsRecordOutputs{
+			DnsRecordArgs: inputs,
+			RecordId:      id,
+		}
+		return infer.CreateResponse[DnsRecordOutputs]{
+			ID:     id,
+			Output: output,
+		}, nil
+	}
+
 	cfgVal := infer.GetConfig[Config](ctx)
 	client, err := r.getClient(ctx, cfgVal)
 	if err != nil {
@@ -121,6 +135,19 @@ func (r *DnsRecord) Read(ctx context.Context, req infer.ReadRequest[DnsRecordArg
 func (r *DnsRecord) Update(ctx context.Context, req infer.UpdateRequest[DnsRecordArgs, DnsRecordOutputs]) (infer.UpdateResponse[DnsRecordOutputs], error) {
 	inputs := req.Inputs
 	old := req.Inputs
+
+	// Workaround for preview mode: check for preview in request.DryRun
+	if req.DryRun {
+		id := fmt.Sprintf("%s:%s:%s:preview", inputs.Zone, inputs.Name, inputs.Type)
+		output := DnsRecordOutputs{
+			DnsRecordArgs: inputs,
+			RecordId:      id,
+		}
+		return infer.UpdateResponse[DnsRecordOutputs]{
+			Output: output,
+		}, nil
+	}
+
 	cfgVal := infer.GetConfig[Config](ctx)
 	client, err := r.getClient(ctx, cfgVal)
 	if err != nil {
@@ -162,6 +189,12 @@ func (r *DnsRecord) Update(ctx context.Context, req infer.UpdateRequest[DnsRecor
 
 // Delete removes the DNS record from Loopia.
 func (r *DnsRecord) Delete(ctx context.Context, req infer.DeleteRequest[DnsRecordOutputs]) error {
+	// Workaround for preview mode: Pulumi Go Provider v1.1.0 does not expose DryRun on DeleteRequest.
+	// We check the context for the pulumi:dryRun value, which is set to true during preview.
+	if dryRun, ok := ctx.Value("pulumi:dryRun").(bool); ok && dryRun {
+		// In preview mode, do nothing.
+		return nil
+	}
 	old := req.State
 	cfgVal := infer.GetConfig[Config](ctx)
 	client, err := r.getClient(ctx, cfgVal)
