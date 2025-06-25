@@ -1,4 +1,4 @@
-package pkg
+package provider
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/pulumi/pulumi-go-provider/infer"
 )
 
-// DnsRecordArgs defines the input properties for the DnsRecord resource.
 type DnsRecordArgs struct {
 	Zone  string `pulumi:"zone" validate:"required"`
 	Name  string `pulumi:"name" validate:"required"`
@@ -16,27 +15,23 @@ type DnsRecordArgs struct {
 	TTL   int    `pulumi:"ttl,omitempty"`
 }
 
-// DnsRecordOutputs defines the output properties for the DnsRecord resource.
 type DnsRecordOutputs struct {
 	DnsRecordArgs
 	RecordId string `pulumi:"recordId"`
 }
 
-// DnsRecord is the custom resource struct.
-type DnsRecord struct{}
+type DnsRecord struct {
+	getClient ClientFactory
+}
 
 func (r *DnsRecord) Create(ctx context.Context, req infer.CreateRequest[DnsRecordArgs]) (infer.CreateResponse[DnsRecordOutputs], error) {
 	inputs := req.Inputs
+	cfgVal := infer.GetConfig[Config](ctx)
+	client, err := r.getClient(ctx, cfgVal)
+	if err != nil {
+		return infer.CreateResponse[DnsRecordOutputs]{}, fmt.Errorf("failed to create client: %w", err)
+	}
 
-	cfgVal := infer.GetConfig[ProviderConfig](ctx)
-
-	username := cfgVal.Username
-	password := cfgVal.Password
-	endpoint := cfgVal.Endpoint
-
-	client := NewLoopiaClient(username, password, endpoint)
-
-	// Check for existing record
 	records, fetchErr := client.GetZoneRecords(inputs.Zone, inputs.Name)
 	if fetchErr != nil {
 		return infer.CreateResponse[DnsRecordOutputs]{}, fmt.Errorf("failed to get DNS records via Loopia API: %w", fetchErr)
@@ -46,7 +41,6 @@ func (r *DnsRecord) Create(ctx context.Context, req infer.CreateRequest[DnsRecor
 		rdataStr, _ := rec["rdata"].(string)
 		ttlInt, _ := rec["ttl"].(int)
 		if typeStr == inputs.Type && rdataStr == inputs.Value && ttlInt == inputs.TTL {
-			// Record already exists, return its ID
 			idInt, _ := rec["record_id"].(int)
 			id := fmt.Sprintf("%s:%s:%s:%d", inputs.Zone, inputs.Name, inputs.Type, idInt)
 			output := DnsRecordOutputs{
@@ -63,10 +57,10 @@ func (r *DnsRecord) Create(ctx context.Context, req infer.CreateRequest[DnsRecor
 	recordObj := map[string]interface{}{
 		"type":     inputs.Type,
 		"ttl":      inputs.TTL,
-		"priority": 0, // Loopia requires priority for MX, else 0
+		"priority": 0,
 		"rdata":    inputs.Value,
 	}
-	err := client.AddZoneRecord(inputs.Zone, inputs.Name, recordObj)
+	err = client.AddZoneRecord(inputs.Zone, inputs.Name, recordObj)
 	if err != nil {
 		return infer.CreateResponse[DnsRecordOutputs]{}, fmt.Errorf("failed to create DNS record via Loopia API: %w", err)
 	}
@@ -82,13 +76,11 @@ func (r *DnsRecord) Create(ctx context.Context, req infer.CreateRequest[DnsRecor
 }
 
 func (r *DnsRecord) Read(ctx context.Context, req infer.ReadRequest[DnsRecordArgs, DnsRecordOutputs]) (infer.ReadResponse[DnsRecordArgs, DnsRecordOutputs], error) {
-	cfgVal := infer.GetConfig[ProviderConfig](ctx)
-
-	username := cfgVal.Username
-	password := cfgVal.Password
-	endpoint := cfgVal.Endpoint
-
-	client := NewLoopiaClient(username, password, endpoint)
+	cfgVal := infer.GetConfig[Config](ctx)
+	client, err := r.getClient(ctx, cfgVal)
+	if err != nil {
+		return infer.ReadResponse[DnsRecordArgs, DnsRecordOutputs]{}, fmt.Errorf("failed to create client: %w", err)
+	}
 	zone := req.Inputs.Zone
 	subdomain := req.Inputs.Name
 	records, err := client.GetZoneRecords(zone, subdomain)
@@ -123,14 +115,11 @@ func (r *DnsRecord) Read(ctx context.Context, req infer.ReadRequest[DnsRecordArg
 func (r *DnsRecord) Update(ctx context.Context, req infer.UpdateRequest[DnsRecordArgs, DnsRecordOutputs]) (infer.UpdateResponse[DnsRecordOutputs], error) {
 	inputs := req.Inputs
 	old := req.Inputs
-
-	cfgVal := infer.GetConfig[ProviderConfig](ctx)
-
-	username := cfgVal.Username
-	password := cfgVal.Password
-	endpoint := cfgVal.Endpoint
-
-	client := NewLoopiaClient(username, password, endpoint)
+	cfgVal := infer.GetConfig[Config](ctx)
+	client, err := r.getClient(ctx, cfgVal)
+	if err != nil {
+		return infer.UpdateResponse[DnsRecordOutputs]{}, fmt.Errorf("failed to create client: %w", err)
+	}
 	zone := inputs.Zone
 	subdomain := inputs.Name
 	records, err := client.GetZoneRecords(zone, subdomain)
@@ -167,14 +156,11 @@ func (r *DnsRecord) Update(ctx context.Context, req infer.UpdateRequest[DnsRecor
 
 func (r *DnsRecord) Delete(ctx context.Context, req infer.DeleteRequest[DnsRecordOutputs]) error {
 	old := req.State
-
-	cfgVal := infer.GetConfig[ProviderConfig](ctx)
-
-	username := cfgVal.Username
-	password := cfgVal.Password
-	endpoint := cfgVal.Endpoint
-
-	client := NewLoopiaClient(username, password, endpoint)
+	cfgVal := infer.GetConfig[Config](ctx)
+	client, err := r.getClient(ctx, cfgVal)
+	if err != nil {
+		return fmt.Errorf("failed to create client: %w", err)
+	}
 	zone := old.Zone
 	subdomain := old.Name
 	records, err := client.GetZoneRecords(zone, subdomain)

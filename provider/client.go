@@ -1,7 +1,8 @@
-package pkg
+package provider
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"html"
@@ -9,7 +10,12 @@ import (
 	"net/http"
 )
 
-// LoopiaClient is a client for the Loopia XML-RPC API.
+type Client interface {
+	AddZoneRecord(domain, subdomain string, recordObj map[string]interface{}) error
+	RemoveZoneRecord(domain, subdomain string, recordID int) error
+	GetZoneRecords(domain, subdomain string) ([]map[string]interface{}, error)
+}
+
 type LoopiaClient struct {
 	Username   string
 	Password   string
@@ -26,8 +32,7 @@ func NewLoopiaClient(username, password, endpoint string) *LoopiaClient {
 	}
 }
 
-// XML-RPC request/response structures
-
+// XML-RPC request/response structures and helpers
 type xmlrpcParam struct {
 	XMLName xml.Name    `xml:"param"`
 	Value   xmlrpcValue `xml:"value"`
@@ -92,7 +97,7 @@ func xmlEscape(s string) string {
 	return html.EscapeString(s)
 }
 
-// AddZoneRecord adds a DNS record to a zone.
+// LoopiaClient implements Client interface
 func (c *LoopiaClient) AddZoneRecord(domain, subdomain string, recordObj map[string]interface{}) error {
 	reqBody := buildXMLRPCRequest("addZoneRecord", c.Username, c.Password, domain, subdomain, recordObj)
 	resp, err := c.HTTPClient.Post(c.Endpoint, "text/xml", bytes.NewBufferString(reqBody))
@@ -106,7 +111,6 @@ func (c *LoopiaClient) AddZoneRecord(domain, subdomain string, recordObj map[str
 	return nil
 }
 
-// RemoveZoneRecord removes a DNS record from a zone.
 func (c *LoopiaClient) RemoveZoneRecord(domain, subdomain string, recordID int) error {
 	reqBody := buildXMLRPCRequest("removeZoneRecord", c.Username, c.Password, domain, subdomain, recordID)
 	resp, err := c.HTTPClient.Post(c.Endpoint, "text/xml", bytes.NewBufferString(reqBody))
@@ -120,7 +124,6 @@ func (c *LoopiaClient) RemoveZoneRecord(domain, subdomain string, recordID int) 
 	return nil
 }
 
-// GetZoneRecords fetches all DNS records for a given zone and subdomain.
 func (c *LoopiaClient) GetZoneRecords(domain, subdomain string) ([]map[string]interface{}, error) {
 	reqBody := buildXMLRPCRequest("getZoneRecords", c.Username, c.Password, domain, subdomain)
 	resp, err := c.HTTPClient.Post(c.Endpoint, "text/xml", bytes.NewBufferString(reqBody))
@@ -132,4 +135,9 @@ func (c *LoopiaClient) GetZoneRecords(domain, subdomain string) ([]map[string]in
 	// TODO: Parse XML-RPC response and return records
 	fmt.Println(string(respData))
 	return nil, nil
+}
+
+// Factory function for real client
+func RealClientFactory(ctx context.Context, config Config) (Client, error) {
+	return NewLoopiaClient(config.Username, config.Password, config.Endpoint), nil
 }
