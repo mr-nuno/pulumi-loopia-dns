@@ -1,5 +1,7 @@
 # Pulumi Loopia DNS Provider
 
+> **Note:** This project is a learning and experimentation project. It is not a production-ready or officially supported Pulumi provider. The codebase will evolve over time as new features, patterns, and improvements are explored.
+
 A Pulumi provider for managing DNS records in Loopia using the XML-RPC API. This project is a template for building custom Pulumi providers in Go, following best practices and the structure of the official Pulumi Go Provider configurable example.
 
 > **Reference:** See the [Pulumi Go Provider official examples](https://github.com/pulumi/pulumi-go-provider/blob/main/examples) for more patterns and advanced use cases.
