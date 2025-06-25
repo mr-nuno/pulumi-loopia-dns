@@ -28,9 +28,9 @@ main.go            # Provider entry point
 2. **Configure the provider in your Pulumi program:**
    ```yaml
    config:
-     loopia-dns:username: <your-username>
-     loopia-dns:password: <your-password>
-     loopia-dns:endpoint: https://api.loopia.se/RPCSERV
+     username: <your-username>
+     password: <your-password>
+     endpoint: https://api.loopia.se/RPCSERV
    ```
 3. **Use the `DnsRecord` resource in your Pulumi code.**
 
@@ -61,9 +61,9 @@ class MyStack : Stack
     {
         // Provider configuration from Pulumi config
         var config = new Config();
-        var username = config.Require("loopia-dns:username");
-        var password = config.RequireSecret("loopia-dns:password");
-        var endpoint = config.Get("loopia-dns:endpoint") ?? "https://api.loopia.se/RPCSERV";
+        var username = config.Require("username");
+        var password = config.RequireSecret("password");
+        var endpoint = config.Get("endpoint") ?? "https://api.loopia.se/RPCSERV";
 
         var provider = new LoopiaDns.Provider("loopia", new ProviderArgs
         {
