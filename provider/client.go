@@ -10,19 +10,22 @@ import (
 	"net/http"
 )
 
+// Client defines the interface for Loopia DNS API operations.
 type Client interface {
-	AddZoneRecord(domain, subdomain string, recordObj map[string]interface{}) error
-	RemoveZoneRecord(domain, subdomain string, recordID int) error
-	GetZoneRecords(domain, subdomain string) ([]map[string]interface{}, error)
+	AddZoneRecord(domain, subdomain string, recordObj map[string]interface{}) error // Add a DNS record
+	RemoveZoneRecord(domain, subdomain string, recordID int) error                  // Remove a DNS record
+	GetZoneRecords(domain, subdomain string) ([]map[string]interface{}, error)      // List DNS records
 }
 
+// LoopiaClient implements the Client interface for the Loopia XML-RPC API.
 type LoopiaClient struct {
-	Username   string
-	Password   string
-	Endpoint   string
-	HTTPClient *http.Client
+	Username   string       // Loopia API username
+	Password   string       // Loopia API password
+	Endpoint   string       // Loopia API endpoint
+	HTTPClient *http.Client // HTTP client for requests
 }
 
+// NewLoopiaClient creates a new LoopiaClient instance.
 func NewLoopiaClient(username, password, endpoint string) *LoopiaClient {
 	return &LoopiaClient{
 		Username:   username,
@@ -32,7 +35,7 @@ func NewLoopiaClient(username, password, endpoint string) *LoopiaClient {
 	}
 }
 
-// XML-RPC request/response structures and helpers
+// xmlrpcParam, xmlrpcValue, xmlrpcMethodCall are helpers for XML-RPC requests.
 type xmlrpcParam struct {
 	XMLName xml.Name    `xml:"param"`
 	Value   xmlrpcValue `xml:"value"`
@@ -47,6 +50,7 @@ type xmlrpcMethodCall struct {
 	Params     []xmlrpcParam `xml:"params>param"`
 }
 
+// buildXMLRPCRequest builds an XML-RPC request body for the given method and arguments.
 func buildXMLRPCRequest(method string, args ...interface{}) string {
 	params := make([]xmlrpcParam, len(args))
 	for i, arg := range args {
@@ -69,6 +73,7 @@ func buildXMLRPCRequest(method string, args ...interface{}) string {
 	return string(out)
 }
 
+// buildXMLRPCStruct builds an XML-RPC struct from a Go map.
 func buildXMLRPCStruct(obj map[string]interface{}) string {
 	var buf bytes.Buffer
 	buf.WriteString("<struct>")
@@ -93,11 +98,12 @@ func buildXMLRPCStruct(obj map[string]interface{}) string {
 	return buf.String()
 }
 
+// xmlEscape escapes a string for XML.
 func xmlEscape(s string) string {
 	return html.EscapeString(s)
 }
 
-// LoopiaClient implements Client interface
+// AddZoneRecord adds a DNS record to a zone using the Loopia API.
 func (c *LoopiaClient) AddZoneRecord(domain, subdomain string, recordObj map[string]interface{}) error {
 	reqBody := buildXMLRPCRequest("addZoneRecord", c.Username, c.Password, domain, subdomain, recordObj)
 	resp, err := c.HTTPClient.Post(c.Endpoint, "text/xml", bytes.NewBufferString(reqBody))
@@ -111,6 +117,7 @@ func (c *LoopiaClient) AddZoneRecord(domain, subdomain string, recordObj map[str
 	return nil
 }
 
+// RemoveZoneRecord removes a DNS record from a zone using the Loopia API.
 func (c *LoopiaClient) RemoveZoneRecord(domain, subdomain string, recordID int) error {
 	reqBody := buildXMLRPCRequest("removeZoneRecord", c.Username, c.Password, domain, subdomain, recordID)
 	resp, err := c.HTTPClient.Post(c.Endpoint, "text/xml", bytes.NewBufferString(reqBody))
@@ -124,6 +131,7 @@ func (c *LoopiaClient) RemoveZoneRecord(domain, subdomain string, recordID int) 
 	return nil
 }
 
+// GetZoneRecords fetches all DNS records for a given zone and subdomain using the Loopia API.
 func (c *LoopiaClient) GetZoneRecords(domain, subdomain string) ([]map[string]interface{}, error) {
 	reqBody := buildXMLRPCRequest("getZoneRecords", c.Username, c.Password, domain, subdomain)
 	resp, err := c.HTTPClient.Post(c.Endpoint, "text/xml", bytes.NewBufferString(reqBody))
@@ -137,7 +145,7 @@ func (c *LoopiaClient) GetZoneRecords(domain, subdomain string) ([]map[string]in
 	return nil, nil
 }
 
-// Factory function for real client
+// RealClientFactory creates a real LoopiaClient from provider config.
 func RealClientFactory(ctx context.Context, config Config) (Client, error) {
 	return NewLoopiaClient(config.Username, config.Password, config.Endpoint), nil
 }

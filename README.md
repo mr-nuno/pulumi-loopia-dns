@@ -1,33 +1,125 @@
-# Loopia DNS Pulumi Provider
+# Pulumi Loopia DNS Provider
 
-This project is the Pulumi provider for Loopia DNS, named `loopia-dns`.
+A Pulumi provider for managing DNS records in Loopia using the XML-RPC API. This project is a template for building custom Pulumi providers in Go, following best practices and the structure of the official Pulumi Go Provider configurable example.
 
-- `main.go`: Provider binary entrypoint
-- `pkg/`: Provider logic and resources
-- `tests/`: Provider-level tests
-- `sdk/`: Generated SDKs for supported languages
+## Features
+- Full CRUD support for Loopia DNS records
+- Secure configuration via Pulumi secrets
+- Dependency-injected client for extensibility and testability
+- Well-documented codebase for easy adaptation to other providers
 
-## Getting Started
-1. Install Go 1.21 or later.
-2. Build the provider:
-   ```sh
-   go build -o bin/pulumi-resource-dns ./cmd/pulumi-resource-dns
-   ```
-3. Implement your provider logic in the `pkg/` directory.
+## Project Structure
 
-## SDK Generation
-To generate SDKs for all supported languages from your schema, run:
-
-```sh
-pulumi package gen-sdk
+```
+provider/
+  provider.go      # Provider definition, config, and registration
+  client.go        # Loopia API client and interface
+  dns_record.go    # DNS record resource implementation
+  subdomain.go     # (Example) Subdomain resource implementation
+main.go            # Provider entry point
 ```
 
-This will use the `schema.json` in the project root and output SDKs to the `sdk/` directory. Make sure to delete any old generated SDKs before running this command to avoid stale files.
+## Usage
+
+1. **Build the provider:**
+   ```sh
+   go build -o bin/pulumi-resource-loopia-dns main.go
+   ```
+2. **Configure the provider in your Pulumi program:**
+   ```yaml
+   config:
+     loopia-dns:username: <your-username>
+     loopia-dns:password: <your-password>
+     loopia-dns:endpoint: https://api.loopia.se/RPCSERV
+   ```
+3. **Use the `DnsRecord` resource in your Pulumi code.**
+
+## .NET SDK Generation and Provider Installation
+
+- The .NET SDK is generated from the provider's schema and is located in `sdk/dotnet/`.
+- To use the provider in your Pulumi .NET program, ensure the generated Go provider executable (e.g., `pulumi-resource-loopia-dns.exe`) is available in your `PATH` or copied to your Pulumi project's working directory.
+- You can build the provider executable with:
+  ```sh
+  go build -o bin/pulumi-resource-loopia-dns main.go
+  ```
+- If you update the provider schema or resources, regenerate the .NET SDK by running (from the repo root):
+  ```sh
+  # Example: using Pulumi's codegen tools (adjust as needed for your setup)
+  pulumi-gen-dotnet --out sdk/dotnet/ schema.json
+  ```
+- After building, you may need to copy the executable to your Pulumi project's directory or ensure it's discoverable by the Pulumi CLI.
+
+## Example: Using DnsRecord in a Pulumi .NET Program
+
+```csharp
+using Pulumi;
+using Pulumi.LoopiaDns;
+
+class MyStack : Stack
+{
+    public MyStack()
+    {
+        // Provider configuration from Pulumi config
+        var config = new Config();
+        var username = config.Require("loopia-dns:username");
+        var password = config.RequireSecret("loopia-dns:password");
+        var endpoint = config.Get("loopia-dns:endpoint") ?? "https://api.loopia.se/RPCSERV";
+
+        var provider = new LoopiaDns.Provider("loopia", new ProviderArgs
+        {
+            Username = username,
+            Password = password,
+            Endpoint = endpoint,
+        });
+
+        var record = new DnsRecord("my-record", new DnsRecordArgs
+        {
+            Zone = "example.com",
+            Name = "www",
+            Type = "A",
+            Value = "1.2.3.4",
+            Ttl = 3600,
+        }, new CustomResourceOptions { Provider = provider });
+    }
+}
+```
+
+## Example: Adding a New Resource (Subdomain)
+
+Suppose you want to add a new resource for managing subdomains. You would:
+
+1. **Create `provider/subdomain.go`** with a resource struct and CRUD methods, following the pattern in `dns_record.go`.
+2. **Register the resource in `provider.go`:**
+   ```go
+   infer.Resource(&Subdomain{getClient: factory}),
+   ```
+3. **Use the new resource in your Pulumi .NET program:**
+   ```csharp
+   using Pulumi;
+   using Pulumi.LoopiaDns;
+
+   class MyStack : Stack
+   {
+       public MyStack()
+       {
+           var subdomain = new Subdomain("my-subdomain", new SubdomainArgs
+           {
+               Zone = "example.com",
+               Name = "blog",
+           });
+       }
+   }
+   ```
+
+## Extending This Provider
+- To add new resources, create a new file in `provider/` and follow the pattern in `dns_record.go`.
+- To support a different API, implement a new `Client` and inject it via the provider factory.
+- All types and methods are documented for easy onboarding.
 
 ## Development
-- Follow Pulumi provider best practices: https://www.pulumi.com/docs/guides/implement-providers/go/
-- Implement resource CRUD logic in `pkg/`.
-- Define your provider schema in `schema.json`.
+- Run `go mod tidy` to manage dependencies.
+- Run `go build ./...` to check for errors.
+- See `provider/` for code documentation and extension points.
 
 ## License
 MIT

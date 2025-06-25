@@ -7,23 +7,27 @@ import (
 	"github.com/pulumi/pulumi-go-provider/infer"
 )
 
+// DnsRecordArgs defines the input properties for the DnsRecord resource.
 type DnsRecordArgs struct {
-	Zone  string `pulumi:"zone" validate:"required"`
-	Name  string `pulumi:"name" validate:"required"`
-	Type  string `pulumi:"type" validate:"required"`
-	Value string `pulumi:"value" validate:"required"`
-	TTL   int    `pulumi:"ttl,omitempty"`
+	Zone  string `pulumi:"zone" validate:"required"`  // The DNS zone (domain)
+	Name  string `pulumi:"name" validate:"required"`  // The record name (subdomain)
+	Type  string `pulumi:"type" validate:"required"`  // The DNS record type (A, CNAME, etc)
+	Value string `pulumi:"value" validate:"required"` // The value for the DNS record
+	TTL   int    `pulumi:"ttl,omitempty"`             // The TTL for the DNS record
 }
 
+// DnsRecordOutputs defines the output properties for the DnsRecord resource.
 type DnsRecordOutputs struct {
 	DnsRecordArgs
-	RecordId string `pulumi:"recordId"`
+	RecordId string `pulumi:"recordId"` // The unique record identifier
 }
 
+// DnsRecord implements CRUD operations for a Loopia DNS record.
 type DnsRecord struct {
-	getClient ClientFactory
+	getClient ClientFactory // Factory for creating a Loopia API client
 }
 
+// Create creates a new DNS record in Loopia.
 func (r *DnsRecord) Create(ctx context.Context, req infer.CreateRequest[DnsRecordArgs]) (infer.CreateResponse[DnsRecordOutputs], error) {
 	inputs := req.Inputs
 	cfgVal := infer.GetConfig[Config](ctx)
@@ -75,6 +79,7 @@ func (r *DnsRecord) Create(ctx context.Context, req infer.CreateRequest[DnsRecor
 	}, nil
 }
 
+// Read fetches the current state of the DNS record from Loopia.
 func (r *DnsRecord) Read(ctx context.Context, req infer.ReadRequest[DnsRecordArgs, DnsRecordOutputs]) (infer.ReadResponse[DnsRecordArgs, DnsRecordOutputs], error) {
 	cfgVal := infer.GetConfig[Config](ctx)
 	client, err := r.getClient(ctx, cfgVal)
@@ -112,6 +117,7 @@ func (r *DnsRecord) Read(ctx context.Context, req infer.ReadRequest[DnsRecordArg
 	}, nil
 }
 
+// Update modifies an existing DNS record in Loopia.
 func (r *DnsRecord) Update(ctx context.Context, req infer.UpdateRequest[DnsRecordArgs, DnsRecordOutputs]) (infer.UpdateResponse[DnsRecordOutputs], error) {
 	inputs := req.Inputs
 	old := req.Inputs
@@ -154,6 +160,7 @@ func (r *DnsRecord) Update(ctx context.Context, req infer.UpdateRequest[DnsRecor
 	}, nil
 }
 
+// Delete removes the DNS record from Loopia.
 func (r *DnsRecord) Delete(ctx context.Context, req infer.DeleteRequest[DnsRecordOutputs]) error {
 	old := req.State
 	cfgVal := infer.GetConfig[Config](ctx)
